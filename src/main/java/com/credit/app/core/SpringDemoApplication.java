@@ -10,6 +10,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.boot.web.servlet.support.SpringBootServletInitializer;
+import org.springframework.cloud.openfeign.EnableFeignClients;
 import org.springframework.context.annotation.Bean;
 import org.springframework.core.Ordered;
 import org.springframework.web.cors.CorsConfiguration;
@@ -20,6 +21,7 @@ import java.util.Arrays;
 import java.util.Collections;
 
 @SpringBootApplication
+@EnableFeignClients
 public class SpringDemoApplication extends SpringBootServletInitializer {
 
     private static final Logger log = LoggerFactory.getLogger(SpringDemoApplication.class);

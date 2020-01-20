@@ -1,9 +1,11 @@
 package com.credit.app.core.persist;
 
+import com.credit.app.core.common.constants.Messages;
 import com.credit.app.core.common.model.CustomerInfo;
 import lombok.Data;
 
 import javax.persistence.Entity;
+import javax.validation.constraints.NotEmpty;
 
 
 @Data
@@ -13,9 +15,9 @@ public class Customer extends BaseEntity<CustomerInfo> {
     private String email;
     private String name;
     private String surname;
-    private long salary;
+    private double salary;
     private String telephone;
-    private long creditLimit;
+    private double creditLimit;
 
     @Override
     public CustomerInfo toInfo() {

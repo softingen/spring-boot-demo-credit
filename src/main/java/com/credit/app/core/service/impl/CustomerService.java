@@ -1,14 +1,17 @@
 package com.credit.app.core.service.impl;
 
+import com.credit.app.core.client.CreditPointClient;
+import com.credit.app.core.common.constants.Constants;
 import com.credit.app.core.common.constants.CustomStatusCodes;
 import com.credit.app.core.common.constants.Messages;
 import com.credit.app.core.common.model.CustomerInfo;
 import com.credit.app.core.common.model.CustomerResponse;
-import com.credit.app.core.common.utils.Utils;
 import com.credit.app.core.exception.AppServiceException;
 import com.credit.app.core.persist.Customer;
 import com.credit.app.core.repo.CustomerRepository;
 import com.credit.app.core.service.ICustomerService;
+import com.credit.app.core.util.CreditLimitCalculator;
+import com.credit.app.core.util.GeneralUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
@@ -23,6 +26,9 @@ public class CustomerService extends BaseService<Customer, CustomerInfo> impleme
 
     @Autowired
     private JavaMailSender javaMailSender;
+
+    @Autowired
+    private CreditPointClient creditPointClient;
 
     @Override
     public CustomerRepository getRepo() {
@@ -67,18 +73,26 @@ public class CustomerService extends BaseService<Customer, CustomerInfo> impleme
             Customer customer = getByTckn(info.getTckn());
 
             if (customer == null) {
-                int creditScore = Utils.newInstance().getCreditScore();
-                if (creditScore < 500) {
-                    info.setCreditLimit(0);
-                } else if (creditScore < 1000) {
-                    info.setCreditLimit(10000);
-                } else {
-                    info.setCreditLimit(info.getSalary() * 4);
+                String creditPoint = "0";
+                try {
+                    creditPoint = creditPointClient.getCreditPoint();
+                    creditPoint = creditPoint.replace(Constants.SEPARATOR, ""); //Service send response with line seperator
+                } catch (Exception e) {
+                    creditPoint = "" + GeneralUtils.generateRandom(0, 2000);
                 }
 
+                Double creditLimit = CreditLimitCalculator.calculateCreditLimit(Integer.parseInt(creditPoint), info.getSalary());
+                info.setCreditLimit(creditLimit);
+
+                // Create Customer
                 CustomerInfo customerInfo = create(info);
 
                 if (customerInfo != null) {
+                    // You can uncomment this line after entering the mail settings in the properties file that shown below properly.
+                    // spring.mail.host=
+                    // spring.mail.port=
+                    // spring.mail.username=
+                    // spring.mail.password=
                     sendCreditScoreMail(info.getCreditLimit(), info.getEmail());
 
                     customerResponse.setCustomerInfo(customerInfo);
@@ -88,6 +102,8 @@ public class CustomerService extends BaseService<Customer, CustomerInfo> impleme
 
             }
         } catch (AppServiceException ex) {
+            customerResponse.setMessage(ex.getMessage());
+            customerResponse.setStatusCode(CustomStatusCodes.FAILURE);
         }
 
         return customerResponse;
@@ -103,7 +119,7 @@ public class CustomerService extends BaseService<Customer, CustomerInfo> impleme
         return customer;
     }
 
-    private boolean sendCreditScoreMail(long creditLimit, String email) {
+    private boolean sendCreditScoreMail(double creditLimit, String email) {
         String message = "";
         if (creditLimit == 0) {
             message = Messages.CREDIT_ACCEPT;
@@ -111,8 +127,7 @@ public class CustomerService extends BaseService<Customer, CustomerInfo> impleme
             message = Messages.CREDIT_REJECT + creditLimit + Messages.TL;
         }
 
-        Utils utils = new Utils(javaMailSender);
+        GeneralUtils utils = new GeneralUtils(javaMailSender);
         return utils.sendEmail(email, message);
     }
-
 }

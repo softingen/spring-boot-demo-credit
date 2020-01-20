@@ -7,8 +7,11 @@ import com.credit.app.core.exception.AppServiceException;
 import com.credit.app.core.persist.Customer;
 import com.credit.app.core.service.ICustomerService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.validation.BindingResult;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import javax.validation.Valid;
 import java.util.List;
 
 @RestController
@@ -37,9 +40,14 @@ public class CustomerController extends BaseController<Customer, CustomerInfo, I
 
     @ResponseBody
     @RequestMapping(path = ServiceUri.ADD_CUSTOMER, method = RequestMethod.POST)
-    public CustomerResponse addCustomer(@RequestBody CustomerInfo customer) throws AppServiceException {
+    public CustomerResponse addCustomer(@Valid @RequestBody CustomerInfo customer, BindingResult bindingResult) throws AppServiceException {
         CustomerResponse result = new CustomerResponse();
         try {
+            if (bindingResult.hasErrors()) {
+                result.setMessage(bindingResult.getAllErrors().get(0).getDefaultMessage());
+                return result;
+            }
+
             result = getService().save(customer);
         } catch (Exception ex) {
         } finally {
